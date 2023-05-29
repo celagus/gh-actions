@@ -1,0 +1,39 @@
+name: 'Deploy Serverless Infrastructure'
+description: 'Deploy Serverless infrastructure'
+inputs:
+  environment:
+    description: 'Environment which to deploy image to'
+    required: true
+    default: "dev"
+  secrets:
+    description: 'ALL THE SECRETS'
+    required: false
+
+runs:
+  using: "composite"
+  steps:
+    - name: Get environment
+      if: inputs.secrets != ''
+      shell: bash
+      run: |
+        echo ENVIRONMENT_UPPER=`printf '%s\n' "${{ inputs.environment }}" | awk '{ print toupper($0) }'` >> $GITHUB_ENV
+    - name: Setup and deploy serverless
+      id: apply
+      shell: bash
+      run: |
+        mkdir -p ~/.aws;touch ~/.aws/config
+        # FOLLOWING LINES EXECUTE SERVERLESS ONLY FOR infra/* DIRECTORIES WHEN CHENGES HAVE HAPPENED
+        cd ./infra/${{ inputs.environment }}
+        DIRS=$(ls -d */)
+        serverless config credentials --provider aws --key $AWS_ACCESS_KEY_ID --secret $AWS_SECRET_ACCESS_KEY --profile cicd-pipeline
+        for D in $DIRS
+        do
+          cd $D
+          # INSTALL PLUGINS HERE IF YOU NEED IT
+          # serverless plugin install -n serverless-python-requirements
+          # serverless plugin install -n serverless-plugin-common-excludes
+          # serverless plugin install -n serverless-plugin-include-dependencies
+          # serverless plugin install -n serverless-step-functions
+          serverless deploy -s $ENVIRONMENT --aws-profile cicd-pipeline
+          cd ..
+        done

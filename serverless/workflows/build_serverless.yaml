@@ -1,0 +1,38 @@
+name: Serverless image building
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+env:
+  dockerFileLocation: "./Dockerfile"
+
+jobs:
+  build:
+    name: Build docker image
+    environment: $ENVIRONMENT
+    runs-on: [self-hosted, default]
+    outputs:
+      imageTag: ${{ steps.docker.outputs.imageTag }}
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - name: Check Dockerfile
+        id: check_file_changed
+        run: |
+          $(diff=$(git diff --name-only HEAD^ HEAD | grep -E "^Dockerfile$")
+          has_diff=false
+          if [ -n "$diff" ]; then
+            has_diff=true
+          fi
+          echo "dockerfile_changed=$has_diff" >> $GITHUB_OUTPUT) || true
+      - name: Build Docker image
+        id: docker_build
+        if: steps.check_file_changed.outputs.dockerfile_changed == 'True'
+        run: |
+          repoPath=$REGISTRY_REPO_PATH
+          imageTag="${repoPath}:latest"
+          docker build -f "${dockerFileLocation}" -t "${imageTag}" .
+          docker push "${imageTag}"

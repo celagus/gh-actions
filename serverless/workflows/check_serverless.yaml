@@ -1,0 +1,19 @@
+name: Check Serverless
+
+on: pull_request
+
+jobs:
+  deploy:
+    name: Check if severless manifest are well built
+    runs-on: [self-hosted, default]
+    container:
+      image: $REGISTRY_REPO_PATH:latest
+    environment: $ENVIRONMENT
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      SLS_STAGE: test
+      SLACK_CHANNEL: test
+    steps:
+      - uses: actions/checkout@v2
+      - uses: ./.github/actions/check_serverless
